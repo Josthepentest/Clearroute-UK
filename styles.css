@@ -1,0 +1,861 @@
+/* =========================
+   CLEARROUTE UK — styles.css
+   =========================
+   SECTIONS:
+   1. Reset & base
+   2. Header
+   3. Layout
+   4. Cards
+   5. Input group
+   6. Buttons
+   7. Collapsed info cards
+   8. Status box
+   9. Briefing box
+   10. Complexity box
+   11. Warnings box
+   12. Steps box
+   13. Map
+   14. Marker selector
+   15. Navigation mode
+   16. Nav banner
+   17. Nav bottom bar
+   18. Lane guidance
+   19. Junction warning
+   20. Location input states
+   21. Spinner
+   22. Animations
+   23. Marker styles
+========================= */
+
+
+/* =========================
+   1. RESET & BASE
+========================= */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont,
+        "Segoe UI", Roboto, Arial, sans-serif;
+    background: #f0f2f5;
+    color: #1a2744;
+    font-size: 15px;
+}
+
+
+/* =========================
+   2. HEADER
+========================= */
+#header {
+    background: #1a2744;
+    color: white;
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    position: sticky;
+    top: 0;
+    z-index: 500;
+}
+
+#header h1 {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+}
+
+#header span {
+    font-size: 12px;
+    color: #7a9cc8;
+    margin-top: 1px;
+    display: block;
+}
+
+
+/* =========================
+   3. LAYOUT
+========================= */
+#app {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 16px 16px 100px;
+}
+
+
+/* =========================
+   4. CARDS
+========================= */
+.card {
+    background: white;
+    border-radius: 12px;
+    border: 1px solid #e8edf5;
+    padding: 16px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+
+.card-title {
+    font-weight: 700;
+    font-size: 13px;
+    margin-bottom: 12px;
+    color: #1a2744;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+
+/* =========================
+   5. INPUT GROUP
+========================= */
+.input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.input-group input {
+    padding: 12px 14px;
+    border: 1.5px solid #e0e6f0;
+    border-radius: 8px;
+    font-size: 15px;
+    width: 100%;
+    background: #fafbff;
+    transition: border-color 0.2s;
+    color: #1a2744;
+}
+
+.input-group input:focus {
+    outline: none;
+    border-color: #3399ff;
+    background: white;
+}
+
+.input-group input::placeholder {
+    color: #aab0c0;
+}
+
+
+/* =========================
+   6. BUTTONS
+========================= */
+.btn {
+    padding: 11px 16px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.15s;
+}
+
+.btn-primary {
+    background: #3399ff;
+    color: white;
+    width: 100%;
+    margin-top: 4px;
+    font-size: 15px;
+    padding: 13px;
+    letter-spacing: 0.2px;
+}
+
+.btn-primary:hover {
+    background: #2288ee;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(51,153,255,0.3);
+}
+
+.btn-secondary {
+    background: #f0f4fa;
+    color: #1a2744;
+    border: 1px solid #e0e6f0;
+}
+
+.btn-secondary:hover {
+    background: #e4eaf5;
+}
+
+.btn-danger {
+    background: #ff4444;
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #ee3333;
+}
+
+.nav-controls {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+}
+
+#getRouteBtn {
+    display: none;
+}
+
+
+/* =========================
+   7. COLLAPSED INFO CARDS
+   Tap to expand pattern
+========================= */
+.info-card {
+    background: white;
+    border-radius: 12px;
+    border: 1px solid #e8edf5;
+    margin-bottom: 10px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    overflow: hidden;
+}
+
+.info-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s;
+}
+
+.info-card-header:hover {
+    background: #fafbff;
+}
+
+.info-card-header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+}
+
+.info-card-icon {
+    font-size: 18px;
+    width: 24px;
+    text-align: center;
+}
+
+.info-card-title {
+    font-weight: 700;
+    font-size: 14px;
+    color: #1a2744;
+}
+
+.info-card-summary {
+    font-size: 12px;
+    color: #7a8599;
+    margin-top: 1px;
+}
+
+.info-card-chevron {
+    font-size: 12px;
+    color: #aab0c0;
+    transition: transform 0.2s;
+}
+
+.info-card.expanded .info-card-chevron {
+    transform: rotate(180deg);
+}
+
+.info-card-body {
+    display: none;
+    padding: 0 16px 14px;
+    border-top: 1px solid #f0f2f5;
+    font-size: 14px;
+    line-height: 1.7;
+    color: #3a4560;
+}
+
+.info-card.expanded .info-card-body {
+    display: block;
+}
+
+/* Complexity dot indicator */
+.complexity-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 4px;
+}
+
+
+/* =========================
+   8. STATUS BOX
+========================= */
+#statusBox {
+    padding: 12px 14px;
+    margin-bottom: 12px;
+    font-size: 14px;
+    border-radius: 8px;
+    display: none;
+    font-weight: 500;
+}
+
+
+/* =========================
+   9. BRIEFING BOX
+   Now inside info-card-body
+========================= */
+.briefing-content {
+    padding-top: 12px;
+    line-height: 1.8;
+}
+
+.briefing-journey {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+}
+
+.briefing-stat {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #f0f4fa;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #1a2744;
+}
+
+
+/* =========================
+   10. COMPLEXITY BOX
+   Inside info-card header as summary
+========================= */
+#complexityBox {
+    display: none;
+}
+
+
+/* =========================
+   11. WARNINGS BOX
+   Inside info-card-body
+========================= */
+.warning-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 8px 0;
+    border-bottom: 1px solid #f0f2f5;
+    font-size: 13px;
+    color: #3a4560;
+}
+
+.warning-item:last-child {
+    border-bottom: none;
+}
+
+.warning-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #ff9900;
+    margin-top: 6px;
+    flex-shrink: 0;
+}
+
+
+/* =========================
+   12. STEPS BOX
+   Hidden during planning
+========================= */
+#stepsBox {
+    display: none;
+}
+
+
+/* =========================
+   13. MAP
+========================= */
+#map {
+    height: 420px;
+    border-radius: 12px;
+    border: 1px solid #e0e6f0;
+    margin-bottom: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+
+/* =========================
+   14. MARKER SELECTOR
+========================= */
+.marker-selector {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #f0f2f5;
+}
+
+.marker-selector-title {
+    font-size: 12px;
+    color: #7a8599;
+    margin-bottom: 8px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+.marker-options {
+    display: flex;
+    gap: 8px;
+}
+
+.marker-btn {
+    padding: 6px 14px;
+    border: 1.5px solid #e0e6f0;
+    border-radius: 20px;
+    background: white;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-weight: 500;
+}
+
+.marker-btn:hover {
+    border-color: #3399ff;
+    color: #3399ff;
+}
+
+.marker-btn.active {
+    border-color: #3399ff;
+    background: #3399ff;
+    color: white;
+}
+
+
+/* =========================
+   15. NAVIGATION MODE
+========================= */
+body.nav-mode #header { display: none; }
+body.nav-mode #app > .card:first-child { display: none; }
+body.nav-mode #statusBox { display: none !important; }
+body.nav-mode #briefingCard { display: none; }
+body.nav-mode #warningsCard { display: none; }
+body.nav-mode #complexityBox { display: none; }
+body.nav-mode #stepsBox { display: none; }
+body.nav-mode .nav-controls-card { display: none; }
+body.nav-mode .marker-selector { display: none; }
+
+body.nav-mode #map {
+    height: calc(100vh - 190px);
+    border-radius: 0;
+    border: none;
+    margin: 0;
+    box-shadow: none;
+}
+
+body.nav-mode #app {
+    padding: 0;
+    max-width: 100%;
+}
+
+
+/* =========================
+   16. NAV BANNER
+========================= */
+#navBanner {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    background: linear-gradient(135deg, #1a7a1a, #2da82d);
+    color: white;
+    padding: 14px 16px 10px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+}
+
+body.nav-mode #navBanner {
+    display: block;
+}
+
+.nav-banner-main {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 8px;
+}
+
+.nav-banner-arrow {
+    width: 52px;
+    height: 52px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    flex-shrink: 0;
+    backdrop-filter: blur(4px);
+}
+
+.nav-banner-instruction {
+    flex: 1;
+}
+
+.nav-banner-street {
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -0.2px;
+}
+
+.nav-banner-distance {
+    font-size: 12px;
+    opacity: 0.8;
+    margin-top: 3px;
+}
+
+.nav-banner-time {
+    font-size: 12px;
+    opacity: 0.75;
+    margin-top: 1px;
+}
+
+.nav-banner-next {
+    background: rgba(0,0,0,0.15);
+    border-radius: 8px;
+    padding: 7px 12px;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    backdrop-filter: blur(4px);
+}
+
+.nav-banner-next span {
+    opacity: 0.8;
+    font-size: 12px;
+}
+
+
+/* =========================
+   17. NAV BOTTOM BAR
+========================= */
+#navControls {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    background: #1a2744;
+    padding: 14px 20px;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 -4px 16px rgba(0,0,0,0.3);
+}
+
+body.nav-mode #navControls {
+    display: flex;
+}
+
+.nav-speed-box {
+    background: white;
+    color: #1a2744;
+    border-radius: 10px;
+    padding: 6px 14px;
+    text-align: center;
+    min-width: 60px;
+}
+
+.nav-speed-number {
+    font-size: 26px;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.nav-speed-unit {
+    font-size: 10px;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.nav-stop-btn {
+    background: #ff4444;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 13px 32px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 0.2px;
+    transition: background 0.15s;
+}
+
+.nav-stop-btn:hover {
+    background: #ee3333;
+}
+
+.nav-step-counter {
+    color: #7a9cc8;
+    font-size: 12px;
+    text-align: right;
+    font-weight: 600;
+}
+
+
+/* =========================
+   18. LANE GUIDANCE
+========================= */
+#laneGuidance {
+    display: none;
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1001;
+    background: #1a2744;
+    border-radius: 12px;
+    padding: 14px 20px;
+    text-align: center;
+    animation: slideIn 0.3s ease;
+    min-width: 280px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+
+#laneGuidance .lane-title {
+    color: white;
+    font-size: 12px;
+    margin-bottom: 12px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+}
+
+.lane-arrows {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+}
+
+.lane-arrow {
+    width: 58px;
+    height: 68px;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    font-weight: bold;
+    gap: 4px;
+}
+
+.lane-arrow .lane-label {
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.lane-correct {
+    background: #1a7a1a;
+    border: 2px solid #22cc22;
+    animation: pulse-green 1.2s infinite;
+}
+
+.lane-wrong {
+    background: #4a2020;
+    border: 2px solid #993333;
+    opacity: 0.6;
+}
+
+.lane-caution {
+    background: #5a4000;
+    border: 2px solid #ffc107;
+    animation: pulse-amber 1.5s infinite;
+}
+
+
+/* =========================
+   19. JUNCTION WARNING
+========================= */
+#junctionWarning {
+    display: none;
+    background: #fff8e8;
+    border: 1px solid #ffc107;
+    border-left: 4px solid #ffc107;
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-bottom: 12px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #7a5800;
+    animation: slideIn 0.3s ease;
+}
+
+
+/* =========================
+   20. LOCATION INPUT STATES
+========================= */
+.location-loading-box {
+    padding: 12px 14px;
+    border: 1.5px solid #e0e6f0;
+    border-radius: 8px;
+    background: #f8f9ff;
+    color: #7a8599;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.location-confirmed-box {
+    padding: 12px 14px;
+    border: 1.5px solid #3399ff;
+    border-radius: 8px;
+    background: #f0f7ff;
+    color: #1a2744;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-weight: 500;
+}
+
+.location-reset-btn {
+    background: none;
+    border: none;
+    color: #aab0c0;
+    cursor: pointer;
+    font-size: 18px;
+    padding: 0 4px;
+    line-height: 1;
+    transition: color 0.15s;
+}
+
+.location-reset-btn:hover {
+    color: #666;
+}
+
+.use-location-btn {
+    margin-top: 6px;
+    width: 100%;
+}
+
+
+/* =========================
+   21. SPINNER
+========================= */
+.location-spinner {
+    width: 18px;
+    height: 18px;
+    border: 2.5px solid #e0e6f0;
+    border-top-color: #3399ff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    flex-shrink: 0;
+}
+
+
+/* =========================
+   22. ANIMATIONS
+========================= */
+@keyframes slideIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+@keyframes pulse-green {
+    0%   { box-shadow: 0 0 0 0 rgba(34,204,34,0.5); }
+    70%  { box-shadow: 0 0 0 10px rgba(34,204,34,0); }
+    100% { box-shadow: 0 0 0 0 rgba(34,204,34,0); }
+}
+
+@keyframes pulse-amber {
+    0%   { box-shadow: 0 0 0 0 rgba(255,193,7,0.5); }
+    70%  { box-shadow: 0 0 0 10px rgba(255,193,7,0); }
+    100% { box-shadow: 0 0 0 0 rgba(255,193,7,0); }
+}
+
+@keyframes pulse-blue {
+    0%   { box-shadow: 0 0 0 0 rgba(51,153,255,0.5); }
+    70%  { box-shadow: 0 0 0 12px rgba(51,153,255,0); }
+    100% { box-shadow: 0 0 0 0 rgba(51,153,255,0); }
+}
+
+
+/* =========================
+   23. MARKER STYLES
+========================= */
+.marker-arrow {
+    width: 0;
+    height: 0;
+    border-left: 18px solid transparent;
+    border-right: 18px solid transparent;
+    border-bottom: 50px solid #3399ff;
+    filter: drop-shadow(0 3px 8px rgba(0,0,0,0.5));
+    transform-origin: center bottom;
+    transition: transform 0.3s ease;
+}
+
+.marker-car {
+    font-size: 36px;
+    line-height: 1;
+    transform-origin: center center;
+    transition: transform 0.3s ease;
+    filter: drop-shadow(0 3px 6px rgba(0,0,0,0.4));
+}
+
+.marker-bike {
+    font-size: 36px;
+    line-height: 1;
+    transform-origin: center center;
+    transition: transform 0.3s ease;
+    filter: drop-shadow(0 3px 6px rgba(0,0,0,0.4));
+}
+
+.marker-cone-wrapper {
+    position: relative;
+    width: 40px;
+    height: 40px;
+}
+
+.marker-cone-direction {
+    position: absolute;
+    width: 0;
+    height: 0;
+    border-left: 12px solid transparent;
+    border-right: 12px solid transparent;
+    border-bottom: 34px solid rgba(51,153,255,0.8);
+    top: -28px;
+    left: 50%;
+    transform: translateX(-50%);
+    transform-origin: bottom center;
+}
+
+.marker-cone-dot {
+    width: 30px;
+    height: 30px;
+    background: #3399ff;
+    border: 4px solid white;
+    border-radius: 50%;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 0 6px rgba(51,153,255,0.3);
+    animation: pulse-blue 1.5s infinite;
+}
+
+/* =========================
+   DEBUG PANEL
+========================= */
+#debugPanel {
+    display: none;
+}

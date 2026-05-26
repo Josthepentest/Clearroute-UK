@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ClearRoute UK</title>
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet"
+        href="https://unpkg.com/leaflet/dist/leaflet.css" />
+
+    <!-- Your styles -->
+    <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+
+<!-- HEADER -->
+    <div id="header">
+        <div>
+            <h1>🗺 ClearRoute UK</h1>
+            <span>Navigation built for clarity</span>
+        </div>
+    </div>
+
+    <div id="app">
+
+        <!-- SEARCH CARD -->
+        <div class="card">
+            <div class="card-title">📍 Plan Your Route</div>
+            <div class="input-group">
+
+                <!-- Location input area -->
+                <div id="startInputArea">
+
+                    <div id="startManualInput">
+                        <input type="text" id="start"
+                            placeholder="Start location (e.g. Baker Street, London)"
+                            oninput="showGetRouteIfReady()">
+                        <button class="btn btn-secondary use-location-btn"
+                            id="useLocationBtn"
+                            onclick="useMyLocation()">
+                            📍 Use My Location
+                        </button>
+                    </div>
+
+                    <div id="startLoadingInput" style="display:none;">
+                        <div class="location-loading-box">
+                            <div class="location-spinner"></div>
+                            Getting your location...
+                        </div>
+                    </div>
+
+                    <div id="startConfirmedInput" style="display:none;">
+                        <div class="location-confirmed-box">
+                            <span>📍 <span id="confirmedLocationText">
+                                Your Location
+                            </span></span>
+                            <button class="location-reset-btn"
+                                onclick="resetStartInput()">✕</button>
+                        </div>
+                    </div>
+
+                </div>
+
+                <input type="text" id="end"
+                    placeholder="Where to? (e.g. Cardiff City Centre)"
+                    oninput="showGetRouteIfReady()">
+
+                <button class="btn btn-primary"
+                    id="getRouteBtn"
+                    onclick="getSmartRoute()">
+                    Get Route →
+                </button>
+
+            </div>
+
+            <!-- Marker style selector -->
+            <div class="marker-selector">
+                <div class="marker-selector-title">
+                    Vehicle style
+                </div>
+                <div class="marker-options">
+                    <button class="marker-btn active"
+                        id="btn-arrow"
+                        onclick="setMarkerStyle('arrow')">
+                        ➤ Arrow
+                    </button>
+                    <button class="marker-btn"
+                        id="btn-car"
+                        onclick="setMarkerStyle('car')">
+                        🚗 Car
+                    </button>
+                    <button class="marker-btn"
+                        id="btn-bike"
+                        onclick="setMarkerStyle('bike')">
+                        🚲 Bike
+                    </button>
+                    <button class="marker-btn"
+                        id="btn-cone"
+                        onclick="setMarkerStyle('cone')">
+                        ◉ Cone
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- STATUS BOX -->
+        <div id="statusBox"></div>
+
+        <!-- BRIEFING — collapsed info card -->
+        <div class="info-card" id="briefingCard" style="display:none;">
+            <div class="info-card-header"
+                onclick="toggleInfoCard('briefingCard')">
+                <div class="info-card-header-left">
+                    <div class="info-card-icon">📋</div>
+                    <div>
+                        <div class="info-card-title">Pre-Drive Briefing</div>
+                        <div class="info-card-summary"
+                            id="briefingSummary">
+                            Tap to expand
+                        </div>
+                    </div>
+                </div>
+                <div class="info-card-chevron">▼</div>
+            </div>
+            <div class="info-card-body">
+                <div class="briefing-content" id="briefingBody"></div>
+            </div>
+        </div>
+
+        <!-- WARNINGS — collapsed info card -->
+        <div class="info-card" id="warningsCard" style="display:none;">
+            <div class="info-card-header"
+                onclick="toggleInfoCard('warningsCard')">
+                <div class="info-card-header-left">
+                    <div class="info-card-icon">⚠️</div>
+                    <div>
+                        <div class="info-card-title">Route Warnings</div>
+                        <div class="info-card-summary"
+                            id="warningsSummary">
+                            Tap to expand
+                        </div>
+                    </div>
+                </div>
+                <div class="info-card-chevron">▼</div>
+            </div>
+            <div class="info-card-body">
+                <div id="warningsBody"></div>
+            </div>
+        </div>
+
+        <!-- COMPLEXITY — hidden, data shown in briefing summary -->
+        <div id="complexityBox"></div>
+
+        <!-- WARNINGS BOX — old, kept for JS compatibility -->
+        <div id="warningsBox" style="display:none;"></div>
+
+        <!-- NAVIGATION CONTROLS -->
+        <div class="card nav-controls-card">
+            <div class="card-title">🧭 Navigation</div>
+            <div class="nav-controls">
+                <button class="btn btn-secondary"
+                    onclick="startNavigationSimulation()">
+                    ▶ Start
+                </button>
+                
+                <button class="btn btn-danger"
+                    onclick="stopNavigation()"
+                    id="stopBtn"
+                    style="display:none;">
+                    ⏹ Stop
+                </button>
+              
+                <select id="simSpeed"
+                    class="btn btn-secondary"
+                    onchange="updateSimSpeed()"
+                    style="cursor:pointer;">
+                    <option value="slow">🐢 Slow</option>
+                    <option value="normal" selected>🚗 Normal</option>
+                    <option value="fast">🚀 Fast</option>
+                </select>
+                <button class="btn btn-secondary"
+                    id="voiceToggleBtn"
+                    onclick="toggleVoice()">
+                    🔊 Voice On
+                </button>
+            </div>
+        </div>
+
+        <!-- STEPS — hidden, shown in nav banner only -->
+        <div id="stepsBox"></div>
+
+        <!-- MAP -->
+        <div id="map"></div>
+
+        <!-- JUNCTION WARNING -->
+        <div id="junctionWarning"></div>
+
+        <!-- LANE GUIDANCE -->
+        <div id="laneGuidance">
+            <div class="lane-title" id="laneTitle">⚠️ LANE GUIDANCE</div>
+            <div class="lane-arrows" id="laneArrows"></div>
+        </div>
+
+        <!-- DEBUG PANEL -->
+        <div id="debugPanel">
+            <div class="card">
+                <div class="card-title">🔧 Debug</div>
+                <div class="input-group">
+                    <input id="startLat" placeholder="Start Latitude">
+                    <input id="startLon" placeholder="Start Longitude">
+                    <input id="endLat" placeholder="End Latitude">
+                    <input id="endLon" placeholder="End Longitude">
+                    <button class="btn btn-secondary"
+                        onclick="loadRoute()">
+                        Load Coordinates
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- NAVIGATION BANNER -->
+    <div id="navBanner">
+        <div class="nav-banner-main">
+            <div class="nav-banner-arrow" id="navBannerArrow">↑</div>
+            <div class="nav-banner-instruction">
+                <div class="nav-banner-street" id="navBannerStreet">
+                    Starting navigation...
+                </div>
+                <div class="nav-banner-distance" id="navBannerDistance">
+                    Calculating...
+                </div>
+                <div class="nav-banner-time" id="navBannerTime"></div>
+            </div>
+        </div>
+        <div class="nav-banner-next" id="navBannerNext"></div>
+    </div>
+
+    <!-- NAVIGATION BOTTOM BAR -->
+    <div id="navControls">
+        <div class="nav-speed-box">
+            <div class="nav-speed-number" id="navSpeed">0</div>
+            <div class="nav-speed-unit">mph</div>
+        </div>
+        <button class="nav-stop-btn" onclick="stopNavigation()">
+            ⏹ Stop
+        </button>
+        <div class="nav-step-counter" id="navStepCounter">
+            Step 1 of 1
+        </div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+    <!-- Your logic -->
+    <script src="script.js"></script>
+
+</body>
+</html>
