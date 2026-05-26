@@ -18,6 +18,12 @@
 
 
 // =========================
+// BACKEND URL
+// =========================
+const BACKEND_URL = "https://clearroute-uk-production.up.railway.app";
+
+
+// =========================
 // 1. MAP INITIALISATION
 // =========================
 var map = L.map('map').setView([51.505, -0.09], 13);
@@ -562,7 +568,7 @@ function useMyLocation() {
             try {
                 // Call backend to reverse geocode coordinates
                 const response = await fetch(
-                    `http://127.0.0.1:8000/reverse-geocode?lat=${lat}&lon=${lon}`
+                    `${BACKEND_URL}/reverse-geocode?lat=${lat}&lon=${lon}`
                 );
                 const data = await response.json();
 
@@ -697,13 +703,13 @@ async function getSmartRoute() {
         // If user confirmed GPS location, use coordinates directly
         // This skips geocoding and is more accurate
         if (confirmedUserLat !== null && confirmedUserLon !== null) {
-            routeUrl = `http://127.0.0.1:8000/route?start_lat=${confirmedUserLat}&start_lon=${confirmedUserLon}&end_lat=0&end_lon=0`;
+            routeUrl = `${BACKEND_URL}/route?start_lat=${confirmedUserLat}&start_lon=${confirmedUserLon}&end_lat=0&end_lon=0`;
 
             // For GPS start, we still need to geocode the destination
             // So use smart-route with confirmed address as start
-            routeUrl = `http://127.0.0.1:8000/smart-route?start=${encodeURIComponent(confirmedUserAddress)}&end=${encodeURIComponent(end)}`;
+            routeUrl = `${BACKEND_URL}/smart-route?start=${encodeURIComponent(confirmedUserAddress)}&end=${encodeURIComponent(end)}`;
         } else {
-            routeUrl = `http://127.0.0.1:8000/smart-route?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`;
+            routeUrl = `${BACKEND_URL}/smart-route?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`;
         }
 
         const response = await fetch(routeUrl);
@@ -858,7 +864,7 @@ async function loadRoute() {
     const endLon = document.getElementById("endLon").value;
 
     const response = await fetch(
-        `http://127.0.0.1:8000/route?start_lat=${startLat}&start_lon=${startLon}&end_lat=${endLat}&end_lon=${endLon}`
+        `${BACKEND_URL}/route?start_lat=${startLat}&start_lon=${startLon}&end_lat=${endLat}&end_lon=${endLon}`
     );
 
     const data = await response.json();
