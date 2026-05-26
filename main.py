@@ -1,7 +1,6 @@
 # =========================
 # IMPORTS (external + internal modules)
 # =========================
-from dotenv import load_dotenv
 import os
 # Detect confusing road situations (sharp turns, close junctions, etc.)
 from utils.Navigation import detect_confusing_turns
@@ -54,7 +53,6 @@ app.add_middleware(
 # =========================
 # API KEY (OpenRouteService)
 # =========================
-load_dotenv()
 API_KEY = os.getenv("ORS_API_KEY")
 
 
