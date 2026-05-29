@@ -955,15 +955,23 @@ async function getSmartRoute() {
 
         // Reset pitch and bearing to flat north-facing view first
         // fitBounds does not work correctly when map is tilted
-        map.jumpTo({ pitch: 0, bearing: 0 });
+        setTimeout(() => {
+            // Calculate proper bounds from ALL route coordinates
+            // MapLibre fitBounds needs [[swLng, swLat], [neLng, neLat]]
+            // not an array of all coords like Leaflet
+            const bounds = new maplibregl.LngLatBounds();
+            toMLCoords(routeCoords).forEach(coord => {
+                bounds.extend(coord);
+            });
 
-        // Force map container to full size then fit bounds
-        map.resize();
-        map.fitBounds(toMLCoords(routeCoords), {
-            padding: { top: 60, bottom: 60, left: 40, right: 40 },
-            duration: 1200,
-            maxZoom: 13
-        });
+            map.fitBounds(bounds, {
+                padding: { top: 60, bottom: 60, left: 40, right: 40 },
+                duration: 1200,
+                maxZoom: 13,
+                pitch: 0,
+                bearing: 0
+            });
+        }, 100);
 
         // Store journey duration for countdown timer
         window.routeDuration = data.journey
@@ -1030,7 +1038,12 @@ async function loadRoute() {
         // Small delay ensures tiles are rendered before fitting bounds
         // Without this fitBounds sometimes fails silently
         setTimeout(() => {
-            map.fitBounds(toMLCoords(routeCoords), {
+            const bounds = new maplibregl.LngLatBounds();
+            toMLCoords(routeCoords).forEach(coord => {
+                bounds.extend(coord);
+            });
+
+            map.fitBounds(bounds, {
                 padding: { top: 80, bottom: 80, left: 60, right: 60 },
                 duration: 800,
                 maxZoom: 14
@@ -1722,7 +1735,12 @@ function stopNavigation() {
 
     // Zoom back out to show full route overview
     if (window.currentRouteCoords) {
-        map.fitBounds(toMLCoords(window.currentRouteCoords), {
+        const stopBounds = new maplibregl.LngLatBounds();
+        toMLCoords(window.currentRouteCoords).forEach(coord => {
+            stopBounds.extend(coord);
+        });
+
+        map.fitBounds(stopBounds, {
             padding: { top: 80, bottom: 80, left: 60, right: 60 },
             duration: 800,
             pitch: 0,
