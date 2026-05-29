@@ -26,28 +26,49 @@ const BACKEND_URL = "https://clearroute-uk-production.up.railway.app";
 // =========================
 // 1. MAP INITIALISATION
 // =========================
-var map = L.map('map').setView([51.505, -0.09], 13);
+const map = new maplibregl.Map({
+    container: 'map',
+    style: 'https://tiles.openfreemap.org/styles/liberty',
+    center: [-0.09, 51.505],  // [longitude, latitude] — note reversed order
+    zoom: 13,
+    pitch: 0,      // flat at start, tilts during navigation
+    bearing: 0     // north up at start, rotates during navigation
+});
 
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19
-}).addTo(map);
+// Wait for map to fully load before any operations
+map.on('load', () => {
+    console.log('MapLibre map loaded successfully');
+});
 
-// When user manually zooms during simulation
-// auto-follow pauses for 5 seconds then resumes
+
+
 map.on("zoomstart", function() {
-
-    // Only pause if simulation is running
     if (!simulationInterval) return;
-
     userManuallyZoomed = true;
-
-    // Clear any existing timeout
     clearTimeout(manualZoomTimeout);
-
-    // Resume auto-follow after 5 seconds
     manualZoomTimeout = setTimeout(() => {
         userManuallyZoomed = false;
     }, 5000);
+});
+
+// MapLibre specific — handle pitch and bearing for navigation
+map.on('load', () => {
+    // Enable 3D buildings when zoomed in
+    map.addLayer({
+        id: '3d-buildings',
+        source: 'openmaptiles',
+        'source-layer': 'building',
+        type: 'fill-extrusion',
+        minzoom: 15,
+        paint: {
+            'fill-extrusion-color': '#aaa',
+            'fill-extrusion-height': [
+                'interpolate', ['linear'], ['zoom'],
+                15, 0, 16, ['get', 'render_height']
+            ],
+            'fill-extrusion-opacity': 0.6
+        }
+    });
 });
 
 // =========================
@@ -117,26 +138,38 @@ let lastMapCentreCoord = null;
 
 
 // =========================
+// MAPLIBRE HELPERS
+// =========================
+
+// Convert [lat, lon] array to MapLibre LngLat format
+// Leaflet uses [lat, lon] — MapLibre uses [lon, lat]
+function toMLCoord(latLon) {
+    return [latLon[1], latLon[0]];
+}
+
+// Convert array of [lat, lon] to MapLibre coordinates
+function toMLCoords(latLonArray) {
+    return latLonArray.map(coord => [coord[1], coord[0]]);
+}
+
+
+
+// =========================
 // 3. STATUS HELPERS
 // =========================
 function showStatus(message, type) {
     const box = document.getElementById("statusBox");
+
+    // Remove all previous type classes
+    box.classList.remove("status-error", "status-loading", "status-success");
+
+    // Add the correct class for this type
+    if (type === "error")   box.classList.add("status-error");
+    if (type === "loading") box.classList.add("status-loading");
+    if (type === "success") box.classList.add("status-success");
+
     box.style.display = "block";
     box.innerHTML = message;
-
-    if (type === "error") {
-        box.style.background = "#ffe0e0";
-        box.style.border = "1px solid red";
-        box.style.color = "red";
-    } else if (type === "loading") {
-        box.style.background = "#fff8e0";
-        box.style.border = "1px solid orange";
-        box.style.color = "orange";
-    } else if (type === "success") {
-        box.style.background = "#e0ffe0";
-        box.style.border = "1px solid green";
-        box.style.color = "green";
-    }
 }
 
 function hideStatus() {
@@ -196,8 +229,8 @@ function setMarkerStyle(style) {
 
     // If simulation is running, update marker immediately
     if (navigationMarker) {
-        const currentPos = navigationMarker.getLatLng();
-        map.removeLayer(navigationMarker);
+        const currentPos = navigationMarker.getLngLat();
+        navigationMarker.remove();
         navigationMarker = createDirectionMarker(
             [currentPos.lat, currentPos.lng], 0
         );
@@ -304,22 +337,17 @@ function createDirectionMarker(coord, bearing) {
     }
 
 
-    // popupAnchor keeps any popup above the marker
-    const icon = L.divIcon({
-        html: `<div style="
-            overflow: visible;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: ${iconSize[0]}px;
-            height: ${iconSize[1]}px;
-        ">${iconHtml}</div>`,
-        iconSize: iconSize,
-        iconAnchor: iconAnchor,
-        className: ""
-    });
+    // Create DOM element for MapLibre marker
+    const el = document.createElement('div');
+    el.className = 'marker-container';
+    el.style.width = iconSize[0] + 'px';   // dynamic — changes per marker style
+    el.style.height = iconSize[1] + 'px';  // dynamic — changes per marker style
+    el.innerHTML = iconHtml;
 
-    const marker = L.marker(coord, { icon }).addTo(map);
+    const marker = new maplibregl.Marker({ element: el })
+        .setLngLat(toMLCoord(coord))
+        .addTo(map);
+
     return marker;
 }
 
@@ -817,39 +845,146 @@ async function getSmartRoute() {
     const routeCoords = data.decoded_geometry;
     window.currentRouteCoords = routeCoords;
 
-    map.eachLayer(layer => {
-        if (layer instanceof L.Polyline || layer instanceof L.Marker) {
-            map.removeLayer(layer);
+    // Remove existing markers if they exist
+    if (window.startMarker) window.startMarker.remove();
+    if (window.endMarker) window.endMarker.remove();
+
+    // Draw route when map style is fully loaded
+    // MapLibre cannot add sources/layers before style loads
+    const drawRoute = () => {
+    try {
+
+        // Remove existing layers if they exist from previous route
+        if (map.getSource('route-remaining')) {
+            map.removeLayer('route-arrows');
+            map.removeLayer('route-remaining-layer');
+            map.removeSource('route-remaining');
         }
-    });
+        if (map.getSource('route-travelled')) {
+            map.removeLayer('route-travelled-layer');
+            map.removeSource('route-travelled');
+        }
 
-    // Draw initial full route as the remaining line
-    // Travelled line starts empty
-    routeLineTravelled = L.polyline([], {
-        color: "#aaaaaa",
-        weight: 4,
-        opacity: 0.5,
-        dashArray: "6 4"   // dashed = already driven
-    }).addTo(map);
+        // Remove existing markers
+        if (window.startMarker) window.startMarker.remove();
+        if (window.endMarker) window.endMarker.remove();
 
-    routeLineRemaining = L.polyline(routeCoords, {
-        color: "#3399ff",
-        weight: 5,
-        opacity: 0.9
-    }).addTo(map);
+        // Blue line — remaining route
+        map.addSource('route-remaining', {
+            type: 'geojson',
+            data: {
+                type: 'Feature',
+                geometry: {
+                    type: 'LineString',
+                    coordinates: toMLCoords(routeCoords)
+                }
+            }
+        });
 
-    L.marker(routeCoords[0]).addTo(map).bindPopup("Start");
-    L.marker(routeCoords[routeCoords.length - 1]).addTo(map)
-        .bindPopup("Destination");
-    map.fitBounds(routeCoords);
+        map.addLayer({
+            id: 'route-remaining-layer',
+            type: 'line',
+            source: 'route-remaining',
+            paint: {
+                'line-color': '#3399ff',
+                'line-width': 6,
+                'line-opacity': 0.9
+            }
+        });
 
-    // Store total journey duration for countdown timer
-    // Used by simulation to count down remaining time
-    window.routeDuration = data.journey
-        ? data.journey.duration_seconds
-        : null;
+        // Grey dashed line — already travelled
+        map.addSource('route-travelled', {
+            type: 'geojson',
+            data: {
+                type: 'Feature',
+                geometry: {
+                    type: 'LineString',
+                    coordinates: []
+                }
+            }
+        });
 
-    console.log("SMART ROUTE DATA:", data);
+        map.addLayer({
+            id: 'route-travelled-layer',
+            type: 'line',
+            source: 'route-travelled',
+            paint: {
+                'line-color': '#aaaaaa',
+                'line-width': 4,
+                'line-opacity': 0.5,
+                'line-dasharray': [2, 2]
+            }
+        });
+
+        // Direction arrows on blue line
+        map.addLayer({
+            id: 'route-arrows',
+            type: 'symbol',
+            source: 'route-remaining',
+            layout: {
+                'symbol-placement': 'line',
+                'symbol-spacing': 100,
+                'text-field': '▶',
+                'text-size': 12,
+                'text-rotation-alignment': 'map',
+                'text-keep-upright': false,
+                'text-allow-overlap': true,
+                'text-ignore-placement': true
+            },
+            paint: {
+                'text-color': '#ffffff',
+                'text-opacity': 0.8
+            }
+        });
+
+        // Store references for simulation updates
+        routeLineRemaining = map.getSource('route-remaining');
+        routeLineTravelled = map.getSource('route-travelled');
+
+        // Green start marker
+        window.startMarker = new maplibregl.Marker({ color: '#22cc22' })
+            .setLngLat(toMLCoord(routeCoords[0]))
+            .setPopup(new maplibregl.Popup().setHTML('Start'))
+            .addTo(map);
+
+        // Red end marker
+        window.endMarker = new maplibregl.Marker({ color: '#ff4444' })
+            .setLngLat(toMLCoord(routeCoords[routeCoords.length - 1]))
+            .setPopup(new maplibregl.Popup().setHTML('Destination'))
+            .addTo(map);
+
+        // Reset pitch and bearing to flat north-facing view first
+        // fitBounds does not work correctly when map is tilted
+        map.jumpTo({ pitch: 0, bearing: 0 });
+
+        // Force map container to full size then fit bounds
+        map.resize();
+        map.fitBounds(toMLCoords(routeCoords), {
+            padding: { top: 60, bottom: 60, left: 40, right: 40 },
+            duration: 1200,
+            maxZoom: 13
+        });
+
+        // Store journey duration for countdown timer
+        window.routeDuration = data.journey
+            ? data.journey.duration_seconds
+            : null;
+
+        console.log("SMART ROUTE DATA:", data);
+    } catch (err) {
+    console.error("drawRoute error:", err);
+    }
+
+    };
+
+    // If map style already loaded — draw immediately
+    // Wait for map to be fully idle before drawing
+    // 'idle' fires after all tiles rendered — more reliable than 'load'
+    if (map.isStyleLoaded()) {
+        drawRoute();
+    } else {
+        map.once('idle', drawRoute);
+    }
 }
 
 
@@ -876,17 +1011,31 @@ async function loadRoute() {
 
     const routeCoords = data.decoded_geometry;
 
-    map.eachLayer(layer => {
-        if (layer instanceof L.Polyline || layer instanceof L.Marker) {
-            map.removeLayer(layer);
-        }
-    });
+    // Remove existing markers if they exist
+    if (window.startMarker) window.startMarker.remove();
+    if (window.endMarker) window.endMarker.remove();
 
-    L.polyline(routeCoords).addTo(map);
-    L.marker(routeCoords[0]).addTo(map).bindPopup("Start");
-    L.marker(routeCoords[routeCoords.length - 1]).addTo(map)
-        .bindPopup("Destination");
-    map.fitBounds(routeCoords);
+    
+    // Start marker
+    window.startMarker = new maplibregl.Marker({ color: '#22cc22' })
+        .setLngLat(toMLCoord(routeCoords[0]))
+        .setPopup(new maplibregl.Popup().setHTML('Start'))
+        .addTo(map);
+
+    // End marker
+    window.endMarker = new maplibregl.Marker({ color: '#ff4444' })
+        .setLngLat(toMLCoord(routeCoords[routeCoords.length - 1]))
+        .setPopup(new maplibregl.Popup().setHTML('Destination'))
+        .addTo(map);
+        // Small delay ensures tiles are rendered before fitting bounds
+        // Without this fitBounds sometimes fails silently
+        setTimeout(() => {
+            map.fitBounds(toMLCoords(routeCoords), {
+                padding: { top: 80, bottom: 80, left: 60, right: 60 },
+                duration: 800,
+                maxZoom: 14
+            });
+        }, 200);
 
     navigationSteps = data.steps || [];
     window.currentRouteCoords = routeCoords;
@@ -956,7 +1105,7 @@ function previousStep() {
 
 function animateMarkerTo(marker, fromCoord, toCoord, duration) {
 
-    const steps = 20; // 20 micro-steps
+    const steps = 20;
     const stepTime = duration / steps;
 
     const latDiff = toCoord[0] - fromCoord[0];
@@ -969,16 +1118,15 @@ function animateMarkerTo(marker, fromCoord, toCoord, duration) {
 
         if (step >= steps) {
             clearInterval(moveInterval);
-            marker.setLatLng(toCoord);
+            marker.setLngLat(toMLCoord(toCoord));
             return;
         }
 
-        // Linear interpolation — moves equal distance each step
         const progress = step / steps;
         const lat = fromCoord[0] + (latDiff * progress);
         const lon = fromCoord[1] + (lonDiff * progress);
 
-        marker.setLatLng([lat, lon]);
+        marker.setLngLat([lon, lat]);
 
     }, stepTime);
 }
@@ -1295,7 +1443,14 @@ function startNavigationSimulation() {
     navigationMarker = createDirectionMarker(routeCoords[0], 0);
 
     // Snap map immediately to marker
-    map.setView(routeCoords[0], 18, { animate: false });
+   map.easeTo({
+        center: toMLCoord(routeCoords[0]),
+        zoom: 16,
+        pitch: 30,
+        bearing: 0,
+        duration: 800,
+        padding: { top: 400, bottom: 80, left: 50, right: 50 }
+    });
 
     // Reset map centre tracker
     lastMapCentreCoord = null;
@@ -1320,6 +1475,11 @@ function startNavigationSimulation() {
     // Set when route loads — we add this next
     remainingSeconds = window.routeDuration || 0;
 
+    // Slower tick speeds for realistic movement
+    const tickSpeed = simTargetMph <= 20 ? 800
+                    : simTargetMph <= 45 ? 400
+                    : 150;
+
     simulationInterval = setInterval(() => {
 
         // -------------------------
@@ -1329,9 +1489,9 @@ function startNavigationSimulation() {
             clearInterval(simulationInterval);
             simulationInterval = null;
 
-            navigationMarker.setLatLng(
+            navigationMarker.setLngLat(toMLCoord(
                 routeCoords[routeCoords.length - 1]
-            );
+            ));
 
             currentStepIndex = navigationSteps.length - 1;
             renderSteps();
@@ -1339,16 +1499,30 @@ function startNavigationSimulation() {
 
             document.getElementById("stopBtn").style.display = "none";
 
-            map.fitBounds(window.currentRouteCoords, {
-                animate: true,
-                duration: 1
+            map.fitBounds(toMLCoords(window.currentRouteCoords), {
+                padding: 50,
+                duration: 1000,
+                pitch: 0,
+                bearing: 0
             });
 
             if (routeLineTravelled) {
-                routeLineTravelled.setLatLngs([]);
+            routeLineTravelled.setData({
+                type: 'Feature',
+                geometry: {
+                    type: 'LineString',
+                    coordinates: toMLCoords(travelledCoords)
+                }
+            });
             }
-            if (routeLineRemaining && window.currentRouteCoords) {
-                routeLineRemaining.setLatLngs(window.currentRouteCoords);
+            if (routeLineRemaining) {
+                routeLineRemaining.setData({
+                    type: 'Feature',
+                    geometry: {
+                        type: 'LineString',
+                        coordinates: toMLCoords(remainingCoords)
+                    }
+                });
             }
 
             document.body.classList.remove("nav-mode");
@@ -1364,32 +1538,13 @@ function startNavigationSimulation() {
         // based on target mph
         // -------------------------
 
-       // 1.2 second tick, capped at 60 metres max per tick
-        // This keeps movement visually smooth regardless of speed setting
-        const targetMetresPerTick = Math.min(
-            simTargetMph * 0.44704 * 1.2,
-            60
-        );
-
-        // Walk forward through coordinates until
-        // we have covered targetMetresPerTick metres
-        let metresToCover = targetMetresPerTick;
-        let coordsToSkip = 1;
-
-        for (let i = coordIndex; i < routeCoords.length - 1; i++) {
-            const segDist = coordDistanceMetres(
-                routeCoords[i],
-                routeCoords[i + 1]
+        // Simple fixed step — move 1 coordinate per tick
+            // Speed selector controls tick interval not coords skipped
+            // This gives smooth consistent visual movement
+            const nextIndex = Math.min(
+                coordIndex + 1,
+                routeCoords.length - 1
             );
-            metresToCover -= segDist;
-            if (metresToCover <= 0) break;
-            coordsToSkip++;
-        }
-
-        const nextIndex = Math.min(
-            coordIndex + coordsToSkip,
-            routeCoords.length - 1
-        );
 
         const currentCoord = routeCoords[coordIndex];
         const nextCoord = routeCoords[nextIndex];
@@ -1398,7 +1553,7 @@ function startNavigationSimulation() {
         // Move and rotate marker
         // -------------------------
         const bearing = calculateBearing(currentCoord, nextCoord);
-        animateMarkerTo(navigationMarker, currentCoord, nextCoord, 700);
+        animateMarkerTo(navigationMarker, currentCoord, nextCoord, tickSpeed * 0.9);
         updateMarkerRotation(bearing);
 
         // -------------------------
@@ -1408,10 +1563,22 @@ function startNavigationSimulation() {
         const remainingCoords = routeCoords.slice(coordIndex);
 
         if (routeLineTravelled) {
-            routeLineTravelled.setLatLngs(travelledCoords);
+        routeLineTravelled.setData({
+            type: 'Feature',
+            geometry: {
+                type: 'LineString',
+                coordinates: toMLCoords(travelledCoords)
+            }
+        });
         }
         if (routeLineRemaining) {
-            routeLineRemaining.setLatLngs(remainingCoords);
+            routeLineRemaining.setData({
+                type: 'Feature',
+                geometry: {
+                    type: 'LineString',
+                    coordinates: toMLCoords(remainingCoords)
+                }
+            });
         }
 
       
@@ -1445,43 +1612,55 @@ function startNavigationSimulation() {
             hideJunctionWarning();
         }
 
-       // -------------------------
-        // SESSION B — Predictive zoom and map following
-        // Only recentre map if marker moved more than 20 metres
-        // Prevents tile thrashing and black gaps
+// -------------------------
+        // SESSION B — Map following and junction warnings
         // -------------------------
         const lookAheadIndex = currentStepIndex + 2;
         const upcomingStep = navigationSteps[lookAheadIndex];
         const upcomingComplexity = getStepComplexity(upcomingStep);
 
+        // Only recentre map if user has not manually zoomed
+        // and marker has moved more than 20 metres
         if (!userManuallyZoomed) {
 
-            // Check how far we have moved since last recentre
             const distMoved = lastMapCentreCoord
                 ? coordDistanceMetres(lastMapCentreCoord, currentCoord)
                 : 999;
 
-            // Only recentre if moved more than 20 metres
-            // This dramatically reduces tile requests
             if (distMoved > 20) {
+                    // Calculate offset in direction of travel
+                    // Convert bearing to radians for offset calculation
+                    const bearingRad = bearing * Math.PI / 180;
+                    const offsetDistance = 0.003; // degrees — pushes view ahead
 
-                const offsetLat = currentCoord[0] + 0.0006;
+                    // Offset center in direction marker is facing
+                    // This keeps marker in lower portion of screen
+                    const centerLon = currentCoord[1] + Math.sin(bearingRad) * offsetDistance;
+                    const centerLat = currentCoord[0] + Math.cos(bearingRad) * offsetDistance;
 
-                map.setView(
-                    [offsetLat, currentCoord[1]],
-                    18,
-                    { animate: false }
-                );
+                    map.easeTo({
+                        center: [currentCoord[1], currentCoord[0]],
+                        zoom: 16,
+                        bearing: bearing,
+                        pitch: 30,
+                        duration: tickSpeed * 0.9,
+                        padding: {
+                            top: 400,
+                            bottom: 80,
+                            left: 50,
+                            right: 50
+                        }
+                    });
+                        lastMapCentreCoord = currentCoord;
+                }
+        }
 
-                lastMapCentreCoord = currentCoord;
-            }
-
-            // Show junction warning regardless of recentre
-            if (upcomingComplexity &&
-                lookAheadIndex !== lastWarnedJunctionIndex) {
-                showJunctionWarning(upcomingComplexity, 2);
-                lastWarnedJunctionIndex = lookAheadIndex;
-            }
+        // Junction warning fires regardless of zoom state
+        // This is your unique feature — always warn driver
+        if (upcomingComplexity &&
+            lookAheadIndex !== lastWarnedJunctionIndex) {
+            showJunctionWarning(upcomingComplexity, 2);
+            lastWarnedJunctionIndex = lookAheadIndex;
         }
 
         // -------------------------
@@ -1496,14 +1675,9 @@ function startNavigationSimulation() {
         }
 
 
-        // -------------------------
-        // Speed display
-        // Show actual calculated speed not target
-        // -------------------------
-        const actualDist = coordDistanceMetres(currentCoord, nextCoord);
-        const actualMph = Math.round(actualDist / 0.8 * 2.237);
+        // Speed display — show simulated speed based on tick setting
         const speedEl = document.getElementById("navSpeed");
-        if (speedEl) speedEl.textContent = Math.min(actualMph, 70);
+        if (speedEl) speedEl.textContent = simTargetMph;
 
         // -------------------------
         // Travel time countdown
@@ -1527,7 +1701,7 @@ function startNavigationSimulation() {
         // -------------------------
         coordIndex = nextIndex;
 
-    }, 1200); // 1.2 seconds per tick — smoother visual pace
+    }, tickSpeed);
 }
 
 
@@ -1542,24 +1716,35 @@ function stopNavigation() {
     }
 
     if (navigationMarker) {
-        map.removeLayer(navigationMarker);
+        navigationMarker.remove();
         navigationMarker = null;
     }
 
     // Zoom back out to show full route overview
     if (window.currentRouteCoords) {
-        map.fitBounds(window.currentRouteCoords, {
-            animate: true,
-            duration: 1
+        map.fitBounds(toMLCoords(window.currentRouteCoords), {
+            padding: { top: 80, bottom: 80, left: 60, right: 60 },
+            duration: 800,
+            pitch: 0,
+            bearing: 0
         });
     }
 
     // Reset route line back to full blue on stop
     if (routeLineTravelled) {
-        routeLineTravelled.setLatLngs([]);
+    routeLineTravelled.setData({
+        type: 'Feature',
+        geometry: { type: 'LineString', coordinates: [] }
+    });
     }
     if (routeLineRemaining && window.currentRouteCoords) {
-        routeLineRemaining.setLatLngs(window.currentRouteCoords);
+        routeLineRemaining.setData({
+            type: 'Feature',
+            geometry: {
+                type: 'LineString',
+                coordinates: toMLCoords(window.currentRouteCoords)
+            }
+        });
     }
 
 
@@ -1595,21 +1780,22 @@ function stopNavigation() {
 // 12. LIVE GPS TRACKING
 // =========================
 function startLiveTracking() {
-
     navigator.geolocation.watchPosition(
         (position) => {
             const lat = position.coords.latitude;
             const lon = position.coords.longitude;
 
             if (!userMarker) {
-                userMarker = L.marker([lat, lon])
-                    .addTo(map)
-                    .bindPopup("📍 You are here");
+                const el = document.createElement('div');
+                el.innerHTML = '📍';
+                el.style.fontSize = '24px';
+                userMarker = new maplibregl.Marker({ element: el })
+                    .setLngLat([lon, lat])
+                    .addTo(map);
             } else {
-                userMarker.setLatLng([lat, lon]);
+                userMarker.setLngLat([lon, lat]);
             }
-
-            map.setView([lat, lon]);
+            map.easeTo({ center: [lon, lat], duration: 500 });
         },
         (error) => {
             console.error("GPS error:", error);

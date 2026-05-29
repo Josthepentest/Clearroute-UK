@@ -377,6 +377,7 @@ body {
 ========================= */
 #map {
     height: 420px;
+    width: 100%;
     border-radius: 12px;
     border: 1px solid #e0e6f0;
     margin-bottom: 12px;
@@ -547,11 +548,15 @@ body.nav-mode #navBanner {
     left: 0;
     right: 0;
     z-index: 1000;
-    background: #1a2744;
+    background: transparent;
     padding: 14px 20px;
     align-items: center;
-    justify-content: space-between;
-    box-shadow: 0 -4px 16px rgba(0,0,0,0.3);
+    justify-content: center;
+    pointer-events: none;
+}
+
+body.nav-mode #navControls {
+    display: flex;
 }
 
 body.nav-mode #navControls {
@@ -591,6 +596,8 @@ body.nav-mode #navControls {
     cursor: pointer;
     letter-spacing: 0.2px;
     transition: background 0.15s;
+    pointer-events: all;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
 }
 
 .nav-stop-btn:hover {
@@ -612,16 +619,16 @@ body.nav-mode #navControls {
     display: none;
     position: fixed;
     bottom: 80px;
-    left: 50%;
-    transform: translateX(-50%);
+    left: 16px;
     z-index: 1001;
     background: #1a2744;
     border-radius: 12px;
-    padding: 14px 20px;
+    padding: 12px 14px;
     text-align: center;
     animation: slideIn 0.3s ease;
-    min-width: 280px;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    min-width: 180px;
+    max-width: 200px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
 }
 
 #laneGuidance .lane-title {
@@ -683,16 +690,20 @@ body.nav-mode #navControls {
 ========================= */
 #junctionWarning {
     display: none;
-    background: #fff8e8;
-    border: 1px solid #ffc107;
-    border-left: 4px solid #ffc107;
-    border-radius: 8px;
-    padding: 10px 14px;
-    margin-bottom: 12px;
+    position: fixed;
+    bottom: 80px;
+    left: 16px;
+    z-index: 1001;
+    background: white;
+    border-radius: 12px;
+    padding: 12px 16px;
     font-size: 13px;
-    font-weight: 600;
-    color: #7a5800;
+    font-weight: 700;
+    color: #1a2744;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+    max-width: 200px;
     animation: slideIn 0.3s ease;
+    border-left: 4px solid #ffc107;
 }
 
 
@@ -859,3 +870,46 @@ body.nav-mode #navControls {
 #debugPanel {
     display: none;
 }
+
+
+/* =========================
+   STATUS BOX TYPES
+========================= */
+#statusBox.status-error {
+    background: #ffe0e0;
+    border: 1px solid red;
+    color: red;
+}
+
+#statusBox.status-loading {
+    background: #fff8e0;
+    border: 1px solid orange;
+    color: orange;
+}
+
+#statusBox.status-success {
+    background: #e0ffe0;
+    border: 1px solid green;
+    color: green;
+}
+
+/* =========================
+   DIRECTION MARKER CONTAINER
+========================= */
+.marker-container {
+    overflow: visible;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+
+body.nav-mode .nav-speed-box {
+    display: block;
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1002;
+    pointer-events: none;
+}
+
