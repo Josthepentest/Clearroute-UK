@@ -108,12 +108,17 @@ def get_route(start_lon: float, start_lat: float, end_lon: float, end_lat: float
     # -------------------------
     # 2. Call routing API
     # -------------------------
-    response = requests.post(
-        url,
-        json=body,
-        headers=headers,
-        timeout=10
-    )
+    try:
+        response = requests.post(
+            url,
+            headers=headers,
+            json=body,
+            timeout=30
+        )
+    except requests.exceptions.Timeout:
+        return {"error": "Route service timed out. Please try again."}
+    except requests.exceptions.RequestException as e:
+        return {"error": f"Route service unavailable: {str(e)}"}
 
     print("STATUS CODE:", response.status_code)
     print("RAW RESPONSE:", response.text[:500])
