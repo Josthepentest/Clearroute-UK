@@ -43,6 +43,11 @@ body {
     background: #f0f2f5;
     color: #1a2744;
     font-size: 15px;
+    /* Phase 3: full-viewport flex column — header on top, shell below */
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
 }
 
 
@@ -52,39 +57,122 @@ body {
 #header {
     background: #1a2744;
     color: white;
-    padding: 14px 20px;
+    padding: 12px 20px;
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 12px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-    position: sticky;
-    top: 0;
+    flex-shrink: 0;
     z-index: 500;
 }
 
-#header h1 {
-    font-size: 20px;
-    font-weight: 700;
-    letter-spacing: -0.3px;
+/* --- BRAND (logo + text) --- All static, no runtime changes --- */
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
-#header span {
-    font-size: 12px;
+.brand-logomark {
+    width: 32px;
+    height: 32px;
+    background: #3399ff;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.brand-logomark i {
+    color: white;
+    font-size: 18px;
+}
+
+.brand-text h1 {
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: -0.2px;
+    line-height: 1.1;
+}
+
+.brand-text span {
+    font-size: 11px;
     color: #7a9cc8;
     margin-top: 1px;
     display: block;
 }
 
 
-/* =========================
-   3. LAYOUT
-========================= */
-#app {
-    max-width: 680px;
-    margin: 0 auto;
-    padding: 16px 16px 100px;
+/* --- HEADER ACTIONS (icon buttons on right) --- */
+/* All static — except .voice-off applied at runtime via JS */
+
+.header-actions {
+    display: flex;
+    gap: 6px;
 }
 
+.header-icon-btn {
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.08);
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s, opacity 0.15s;
+    padding: 0;
+}
+
+.header-icon-btn:hover {
+    background: rgba(255, 255, 255, 0.16);
+}
+
+.header-icon-btn i {
+    font-size: 16px;
+    color: white;
+}
+
+/* Voice toggle off-state — applied by toggleVoice() */
+.header-icon-btn.voice-off {
+    opacity: 0.45;
+}
+
+
+
+
+
+/* =========================
+   3. LAYOUT (Phase 3 two-column shell)
+========================= */
+/* All static unless noted */
+
+#layoutShell {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+    min-height: 0;
+}
+
+#sidebar {
+    width: 340px;
+    flex-shrink: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 16px;
+    background: #f6f7f9;
+    border-right: 1px solid #e8edf5;
+}
+
+#mapPane {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    min-width: 0;
+}
 
 /* =========================
    4. CARDS
@@ -200,61 +288,85 @@ body {
 
 
 /* =========================
-   7. COLLAPSED INFO CARDS
-   Tap to expand pattern
+   7. MINI INFO CARDS (Phase 4)
 ========================= */
+/* All static unless noted */
+
 .info-card {
     background: white;
-    border-radius: 12px;
+    border-radius: 10px;
     border: 1px solid #e8edf5;
-    margin-bottom: 10px;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    margin-bottom: 8px;
     overflow: hidden;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.info-card:hover {
+    border-color: #d0d8e8;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
 }
 
 .info-card-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 14px 16px;
-    cursor: pointer;
-    user-select: none;
-    transition: background 0.15s;
-}
-
-.info-card-header:hover {
-    background: #fafbff;
-}
-
-.info-card-header-left {
-    display: flex;
+    display: grid;
+    grid-template-columns: 32px 1fr 16px;
     align-items: center;
     gap: 10px;
-    flex: 1;
+    padding: 10px 12px;
+    cursor: pointer;
+    user-select: none;
 }
 
 .info-card-icon {
-    font-size: 18px;
-    width: 24px;
-    text-align: center;
+    width: 32px;
+    height: 32px;
+    background: #e8f1fc;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.info-card-icon i {
+    font-size: 15px;
+    color: #185fa5;
+}
+
+/* Warnings card icon — orange tint */
+#warningsCard .info-card-icon {
+    background: #fef0eb;
+}
+
+#warningsCard .info-card-icon i {
+    color: #c14a00;
+}
+
+.info-card-text {
+    min-width: 0;
 }
 
 .info-card-title {
-    font-weight: 700;
-    font-size: 14px;
+    font-size: 13px;
+    font-weight: 600;
     color: #1a2744;
+    line-height: 1.2;
 }
 
 .info-card-summary {
-    font-size: 12px;
+    font-size: 11px;
     color: #7a8599;
-    margin-top: 1px;
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .info-card-chevron {
-    font-size: 12px;
     color: #aab0c0;
+    font-size: 13px;
     transition: transform 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .info-card.expanded .info-card-chevron {
@@ -263,26 +375,22 @@ body {
 
 .info-card-body {
     display: none;
-    padding: 0 16px 14px;
+    padding: 0 12px 12px;
     border-top: 1px solid #f0f2f5;
-    font-size: 14px;
-    line-height: 1.7;
+    font-size: 13px;
+    line-height: 1.6;
     color: #3a4560;
 }
 
 .info-card.expanded .info-card-body {
     display: block;
+    padding-top: 10px;
 }
 
-/* Complexity dot indicator */
+/* Legacy class — no longer used but kept for safety */
 .complexity-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    display: inline-block;
-    margin-right: 4px;
+    display: none;
 }
-
 
 /* =========================
    8. STATUS BOX
@@ -376,12 +484,12 @@ body {
    13. MAP
 ========================= */
 #map {
-    height: 420px;
     width: 100%;
-    border-radius: 12px;
-    border: 1px solid #e0e6f0;
-    margin-bottom: 12px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    height: 100%;
+    margin: 0;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
 }
 
 
@@ -404,7 +512,8 @@ body {
 }
 
 .marker-options {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
     gap: 8px;
 }
 
@@ -417,6 +526,10 @@ body {
     cursor: pointer;
     transition: all 0.15s;
     font-weight: 500;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .marker-btn:hover {
@@ -432,30 +545,15 @@ body {
 
 
 /* =========================
-   15. NAVIGATION MODE
+   15. NAVIGATION MODE (Phase 3 simplified)
 ========================= */
+/* Hide the whole sidebar in one stroke — its contents come along */
 body.nav-mode #header { display: none; }
-body.nav-mode #app > .card:first-child { display: none; }
-body.nav-mode #statusBox { display: none !important; }
-body.nav-mode #briefingCard { display: none; }
-body.nav-mode #warningsCard { display: none; }
-body.nav-mode #complexityBox { display: none; }
-body.nav-mode #stepsBox { display: none; }
-body.nav-mode .nav-controls-card { display: none; }
-body.nav-mode .marker-selector { display: none; }
+body.nav-mode #sidebar { display: none; }
 
-body.nav-mode #map {
-    height: calc(100vh - 190px);
-    border-radius: 0;
-    border: none;
-    margin: 0;
-    box-shadow: none;
-}
+/* Map already fills mapPane via 100%; in nav-mode, mapPane fills full viewport
+   because the sidebar is gone. No further #map overrides needed. */
 
-body.nav-mode #app {
-    padding: 0;
-    max-width: 100%;
-}
 
 
 /* =========================
@@ -913,3 +1011,390 @@ body.nav-mode .nav-speed-box {
     pointer-events: none;
 }
 
+/* =========================
+   24. ICON HELPERS (Phase 1)
+========================= */
+/* All static — no runtime changes */
+
+/* Subtle baseline nudge for inline Tabler icons */
+.ti {
+    vertical-align: -2px;
+}
+
+/* Card title needs to align icon with text horizontally */
+.card-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.card-title i {
+    font-size: 16px;
+    color: #3399ff;
+}
+
+/* All buttons: align icon + label horizontally */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+/* Marker style buttons */
+.marker-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.marker-btn i {
+    font-size: 14px;
+}
+
+/* Confirmed location row needs icon-text alignment */
+.confirmed-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Lane guidance title icon spacing */
+#laneGuidance .lane-title {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+/* Junction warning icon spacing (uses innerHTML now) */
+#junctionWarning i {
+    margin-right: 4px;
+}
+
+/* Status box icon spacing */
+#statusBox i {
+    margin-right: 6px;
+}
+
+/* Loader spinner for loading status */
+.status-spin {
+    display: inline-block;
+    animation: spin 0.8s linear infinite;
+}
+
+/* =========================
+   25. RESPONSIVE — MOBILE
+========================= */
+/* All static. Below 768px: stack sidebar above map, page scrolls. */
+
+@media (max-width: 768px) {
+
+    body {
+        display: block;
+        height: auto;
+        overflow: visible;
+    }
+
+    #header {
+        position: sticky;
+        top: 0;
+    }
+
+    #layoutShell {
+        display: block;
+        height: auto;
+        overflow: visible;
+    }
+
+    #sidebar {
+        width: 100%;
+        overflow-y: visible;
+        border-right: none;
+        border-bottom: 1px solid #e8edf5;
+        padding: 12px;
+    }
+
+    #mapPane {
+        height: 60vh;
+        min-height: 360px;
+    }
+
+    /* In nav-mode on mobile, map needs to fill viewport */
+    body.nav-mode #mapPane {
+        height: 100vh;
+    }
+}
+
+/* =========================
+   26. HERO COMPLEXITY CARD (Phase 4)
+========================= */
+/* All static except .hero-level color, which is set via .level-* class at runtime */
+
+.hero-card {
+    background: linear-gradient(135deg, #1a2744, #2a3a5e);
+    color: white;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 10px;
+    box-shadow: 0 2px 10px rgba(26, 39, 68, 0.18);
+}
+
+.hero-label {
+    font-size: 10px;
+    color: #7a9cc8;
+    font-weight: 500;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+}
+
+.hero-score-row {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+}
+
+.hero-score {
+    font-size: 36px;
+    font-weight: 600;
+    letter-spacing: -1px;
+    line-height: 1;
+}
+
+.hero-level {
+    font-size: 14px;
+    font-weight: 500;
+}
+
+/* Runtime classes — applied by calculateComplexityScore output */
+.hero-level.level-low    { color: #6ee76e; }
+.hero-level.level-medium { color: #ffc107; }
+.hero-level.level-high   { color: #ff8888; }
+
+.hero-meta {
+    display: flex;
+    gap: 14px;
+    margin-top: 10px;
+    font-size: 12px;
+    color: #b0c4dd;
+}
+
+.hero-meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.hero-meta i {
+    font-size: 13px;
+}
+
+
+/* =========================
+   27. SETTINGS PANEL (Phase 5)
+========================= */
+/* Static styling. Visibility controlled by .settings-open class on body. */
+
+.settings-panel {
+    display: none;
+    position: fixed;
+    top: 56px;
+    right: 16px;
+    width: 280px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.18);
+    z-index: 600;
+    overflow: hidden;
+}
+
+body.settings-open .settings-panel {
+    display: block;
+}
+
+.settings-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    border-bottom: 1px solid #e8edf5;
+}
+
+.settings-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1a2744;
+    letter-spacing: 0.3px;
+}
+
+.settings-close {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    color: #7a8599;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    transition: background 0.15s, color 0.15s;
+}
+
+.settings-close:hover {
+    color: #1a2744;
+    background: #f0f4fa;
+}
+
+.settings-section {
+    padding: 12px 14px;
+}
+
+.settings-section-title {
+    font-size: 11px;
+    color: #7a8599;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+/* Hide settings panel during navigation */
+body.nav-mode .settings-panel {
+    display: none !important;
+}
+
+/* Mobile — full-ish width panel */
+@media (max-width: 480px) {
+    .settings-panel {
+        width: calc(100vw - 32px);
+        right: 16px;
+    }
+}
+
+/* Speed selector inside settings panel */
+.settings-select {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1.5px solid #e0e6f0;
+    border-radius: 8px;
+    font-size: 13px;
+    background: #fafbff;
+    color: #1a2744;
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: 500;
+}
+
+.settings-select:focus {
+    outline: none;
+    border-color: #3399ff;
+    background: white;
+}
+
+/* =========================
+   28. MAP OVERLAYS (Phase 5)
+========================= */
+/* Static styling. Visibility controlled by inline display:flex from JS,
+   or hidden in nav-mode via the rules below. */
+
+.map-fab-start {
+    position: absolute;
+    bottom: 22px;
+    right: 22px;
+    z-index: 100;
+    background: #3399ff;
+    color: white;
+    border: none;
+    border-radius: 28px;
+    padding: 12px 22px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 4px 14px rgba(51, 153, 255, 0.4);
+    transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
+}
+
+.map-fab-start:hover {
+    transform: translateY(-1px);
+    background: #2288ee;
+    box-shadow: 0 6px 18px rgba(51, 153, 255, 0.5);
+}
+
+.map-fab-start i {
+    font-size: 16px;
+}
+
+.map-overlay-pill {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    z-index: 100;
+    background: white;
+    color: #1a2744;
+    border-radius: 20px;
+    padding: 7px 14px;
+    font-size: 12px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+    cursor: pointer;
+    user-select: none;
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.map-overlay-pill:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+}
+
+.map-overlay-pill i {
+    font-size: 14px;
+    color: #3399ff;
+}
+
+/* Hide both overlays during navigation */
+body.nav-mode .map-fab-start { display: none !important; }
+body.nav-mode .map-overlay-pill { display: none !important; }
+
+/* =========================
+   29. TOAST NOTIFICATION (Phase 6)
+========================= */
+/* Static styling. Visibility controlled by .show class added/removed in JS. */
+
+.toast {
+    position: fixed;
+    top: 80px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-12px);
+    background: #1a2744;
+    color: white;
+    padding: 12px 22px;
+    border-radius: 26px;
+    font-size: 14px;
+    font-weight: 500;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+    z-index: 2000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    max-width: calc(100vw - 32px);
+}
+
+.toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+.toast i {
+    font-size: 16px;
+    color: #6ee76e;
+}

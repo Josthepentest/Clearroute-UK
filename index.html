@@ -3,9 +3,15 @@
 <head>
     <title>ClearRoute UK</title>
 
+    <!-- Inline SVG favicon — uses the brand route icon, no extra file needed -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233399ff' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='18' height='18' rx='4' fill='%231a2744' stroke='none'/%3E%3Cpath d='M6 19V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v14a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2'/%3E%3C/svg%3E" />
     <!-- MapLibre GL JS CSS -->
     <link rel="stylesheet"
     href="https://unpkg.com/maplibre-gl/dist/maplibre-gl.css" />
+    
+    <!-- Tabler Icons -->
+    <link rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css" />
 
     <!-- Your styles -->
     <link rel="stylesheet" href="styles.css" />
@@ -15,196 +21,218 @@
 
 <!-- HEADER -->
     <div id="header">
-        <div>
-            <h1>🗺 ClearRoute UK</h1>
-            <span>Navigation built for clarity</span>
+        <div class="brand">
+            <div class="brand-logomark">
+                <i class="ti ti-route"></i>
+            </div>
+            <div class="brand-text">
+                <h1>ClearRoute UK</h1>
+                <span>Navigation built for clarity</span>
+            </div>
+        </div>
+
+        <div class="header-actions">
+            <button class="header-icon-btn"
+                id="voiceToggleBtn"
+                onclick="toggleVoice()"
+                title="Toggle voice guidance">
+                <i class="ti ti-volume" id="voiceIcon"></i>
+            </button>
+            <button class="header-icon-btn"
+                id="settingsBtn"
+                onclick="toggleSettings()"
+                title="Settings">
+                <i class="ti ti-settings"></i>
+            </button>
         </div>
     </div>
 
-    <div id="app">
+    <div id="layoutShell">
+        <aside id="sidebar">
 
-        <!-- SEARCH CARD -->
-        <div class="card">
-            <div class="card-title">📍 Plan Your Route</div>
-            <div class="input-group">
+            <!-- SEARCH CARD -->
+            <div class="card">
+                <div class="card-title">
+                    <i class="ti ti-map-pin"></i>
+                    Plan Your Route
+                </div>
+                <div class="input-group">
 
-                <!-- Location input area -->
-                <div id="startInputArea">
+                    <!-- Location input area -->
+                    <div id="startInputArea">
 
-                    <div id="startManualInput">
-                        <input type="text" id="start"
-                            placeholder="Start location (e.g. Baker Street, London)"
-                            oninput="showGetRouteIfReady()">
-                        <button class="btn btn-secondary use-location-btn"
-                            id="useLocationBtn"
-                            onclick="useMyLocation()">
-                            📍 Use My Location
-                        </button>
-                    </div>
-
-                    <div id="startLoadingInput" style="display:none;">
-                        <div class="location-loading-box">
-                            <div class="location-spinner"></div>
-                            Getting your location...
+                        <div id="startManualInput">
+                            <input type="text" id="start"
+                                placeholder="Start location (e.g. Baker Street, London)"
+                                oninput="showGetRouteIfReady()">
+                            <button class="btn btn-secondary use-location-btn"
+                                id="useLocationBtn"
+                                onclick="useMyLocation()">
+                                <i class="ti ti-current-location"></i>
+                                Use My Location
+                            </button>
                         </div>
-                    </div>
 
-                    <div id="startConfirmedInput" style="display:none;">
-                        <div class="location-confirmed-box">
-                            <span>📍 <span id="confirmedLocationText">
-                                Your Location
-                            </span></span>
-                            <button class="location-reset-btn"
-                                onclick="resetStartInput()">✕</button>
+                        <div id="startLoadingInput" style="display:none;">
+                            <div class="location-loading-box">
+                                <div class="location-spinner"></div>
+                                Getting your location...
+                            </div>
                         </div>
-                    </div>
 
-                </div>
-
-                <input type="text" id="end"
-                    placeholder="Where to? (e.g. Cardiff City Centre)"
-                    oninput="showGetRouteIfReady()">
-
-                <button class="btn btn-primary"
-                    id="getRouteBtn"
-                    onclick="getSmartRoute()">
-                    Get Route →
-                </button>
-
-            </div>
-
-            <!-- Marker style selector -->
-            <div class="marker-selector">
-                <div class="marker-selector-title">
-                    Vehicle style
-                </div>
-                <div class="marker-options">
-                    <button class="marker-btn active"
-                        id="btn-arrow"
-                        onclick="setMarkerStyle('arrow')">
-                        ➤ Arrow
-                    </button>
-                    <button class="marker-btn"
-                        id="btn-car"
-                        onclick="setMarkerStyle('car')">
-                        🚗 Car
-                    </button>
-                    <button class="marker-btn"
-                        id="btn-bike"
-                        onclick="setMarkerStyle('bike')">
-                        🚲 Bike
-                    </button>
-                    <button class="marker-btn"
-                        id="btn-cone"
-                        onclick="setMarkerStyle('cone')">
-                        ◉ Cone
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- STATUS BOX -->
-        <div id="statusBox"></div>
-
-        <!-- BRIEFING — collapsed info card -->
-        <div class="info-card" id="briefingCard" style="display:none;">
-            <div class="info-card-header"
-                onclick="toggleInfoCard('briefingCard')">
-                <div class="info-card-header-left">
-                    <div class="info-card-icon">📋</div>
-                    <div>
-                        <div class="info-card-title">Pre-Drive Briefing</div>
-                        <div class="info-card-summary"
-                            id="briefingSummary">
-                            Tap to expand
+                        <div id="startConfirmedInput" style="display:none;">
+                            <div class="location-confirmed-box">
+                                <span class="confirmed-row">
+                                    <i class="ti ti-map-pin"></i>
+                                    <span id="confirmedLocationText">Your Location</span>
+                                </span>
+                                <button class="location-reset-btn"
+                                    onclick="resetStartInput()">
+                                    <i class="ti ti-x"></i>
+                                </button>
+                            </div>
                         </div>
+
                     </div>
+
+                    <input type="text" id="end"
+                        placeholder="Where to? (e.g. Cardiff City Centre)"
+                        oninput="showGetRouteIfReady()">
+
+                    <button class="btn btn-primary"
+                        id="getRouteBtn"
+                        onclick="getSmartRoute()"> 
+                        Get Route 
+                        <i class="ti ti-route"></i>
+                    </button>
+
                 </div>
-                <div class="info-card-chevron">▼</div>
             </div>
-            <div class="info-card-body">
-                <div class="briefing-content" id="briefingBody"></div>
-            </div>
-        </div>
 
-        <!-- WARNINGS — collapsed info card -->
-        <div class="info-card" id="warningsCard" style="display:none;">
-            <div class="info-card-header"
-                onclick="toggleInfoCard('warningsCard')">
-                <div class="info-card-header-left">
-                    <div class="info-card-icon">⚠️</div>
-                    <div>
-                        <div class="info-card-title">Route Warnings</div>
-                        <div class="info-card-summary"
-                            id="warningsSummary">
-                            Tap to expand
-                        </div>
-                    </div>
-                </div>
-                <div class="info-card-chevron">▼</div>
-            </div>
-            <div class="info-card-body">
-                <div id="warningsBody"></div>
-            </div>
-        </div>
-
-        <!-- COMPLEXITY — hidden, data shown in briefing summary -->
-        <div id="complexityBox"></div>
-
-        <!-- WARNINGS BOX — old, kept for JS compatibility -->
-        <div id="warningsBox" style="display:none;"></div>
-
-        <!-- NAVIGATION CONTROLS -->
-        <div class="card nav-controls-card">
-            <div class="card-title">🧭 Navigation</div>
-            <div class="nav-controls">
-                <button class="btn btn-secondary"
-                    onclick="startNavigationSimulation()">
-                    ▶ Start
-                </button>
                 
-                <button class="btn btn-danger"
-                    onclick="stopNavigation()"
-                    id="stopBtn"
-                    style="display:none;">
-                    ⏹ Stop
-                </button>
-              
-                <select id="simSpeed"
-                    class="btn btn-secondary"
-                    onchange="updateSimSpeed()"
-                    style="cursor:pointer;">
-                    <option value="slow">🐢 Slow</option>
-                    <option value="normal" selected>🚗 Normal</option>
-                    <option value="fast">🚀 Fast</option>
-                </select>
-                <button class="btn btn-secondary"
-                    id="voiceToggleBtn"
-                    onclick="toggleVoice()">
-                    🔊 Voice On
-                </button>
+
+            <!-- HERO COMPLEXITY CARD -->
+            <div class="hero-card" id="heroCard" style="display:none;">
+                <div class="hero-label">Route Complexity</div>
+                <div class="hero-score-row">
+                    <div class="hero-score" id="heroScore">—</div>
+                    <div class="hero-level" id="heroLevel">—</div>
+                </div>
+                <div class="hero-meta">
+                    <span>
+                        <i class="ti ti-clock"></i>
+                        <span id="heroTime">—</span>
+                    </span>
+                    <span>
+                        <i class="ti ti-route"></i>
+                        <span id="heroDistance">—</span>
+                    </span>
+                </div>
             </div>
-        </div>
 
-        <!-- STEPS — hidden, shown in nav banner only -->
-        <div id="stepsBox"></div>
 
-        <!-- MAP -->
-        <div id="map"></div>
+            <!-- STATUS BOX -->
+            <div id="statusBox"></div>
+
+            <!-- BRIEFING — collapsed info card -->
+            <div class="info-card" id="briefingCard" style="display:none;">
+                <div class="info-card-header"
+                    onclick="toggleInfoCard('briefingCard')">
+                    <div class="info-card-icon">
+                        <i class="ti ti-clipboard-list"></i>
+                    </div>
+                    <div class="info-card-text">
+                        <div class="info-card-title">Pre-Drive Briefing</div>
+                        <div class="info-card-summary" id="briefingSummary">
+                            Tap to expand
+                        </div>
+                    </div>
+                    <div class="info-card-chevron">
+                        <i class="ti ti-chevron-down"></i>
+                    </div>
+                </div>
+                <div class="info-card-body">
+                    <div class="briefing-content" id="briefingBody"></div>
+                </div>
+            </div>
+
+            <!-- WARNINGS — collapsed info card -->
+           <div class="info-card" id="warningsCard" style="display:none;">
+                <div class="info-card-header"
+                    onclick="toggleInfoCard('warningsCard')">
+                    <div class="info-card-icon">
+                        <i class="ti ti-alert-triangle"></i>
+                    </div>
+                    <div class="info-card-text">
+                        <div class="info-card-title">Route Warnings</div>
+                        <div class="info-card-summary" id="warningsSummary">
+                            Tap to expand
+                        </div>
+                    </div>
+                    <div class="info-card-chevron">
+                        <i class="ti ti-chevron-down"></i>
+                    </div>
+                </div>
+                <div class="info-card-body">
+                    <div id="warningsBody"></div>
+                </div>
+            </div>
+
+            <!-- COMPLEXITY — hidden, data shown in briefing summary -->
+            <div id="complexityBox"></div>
+
+            <!-- WARNINGS BOX — old, kept for JS compatibility -->
+            <div id="warningsBox" style="display:none;"></div>
+
+
+            <!-- STEPS — hidden, shown in nav banner only -->
+            <div id="stepsBox"></div>
+
+        </aside>
+
+        <main id="mapPane">
+            <!-- MAP -->
+            <div id="map"></div>
+
+            <!-- PREVIEW PILL (top-right of map) -->
+            <div class="map-overlay-pill"
+                id="previewPill"
+                style="display:none;"
+                onclick="previewRoute()"
+                title="Refit map to whole route">
+                <i class="ti ti-navigation"></i>
+                Preview route
+            </div>
+
+            <!-- FAB START (bottom-right of map) -->
+            <button class="map-fab-start"
+                id="fabStart"
+                style="display:none;"
+                onclick="startNavigationSimulation()">
+                <i class="ti ti-player-play"></i>
+                Start navigation
+            </button>
+        </main>
 
         <!-- JUNCTION WARNING -->
         <div id="junctionWarning"></div>
 
         <!-- LANE GUIDANCE -->
         <div id="laneGuidance">
-            <div class="lane-title" id="laneTitle">⚠️ LANE GUIDANCE</div>
+            <div class="lane-title" id="laneTitle">
+                <i class="ti ti-alert-triangle"></i>
+                LANE GUIDANCE
+            </div>
             <div class="lane-arrows" id="laneArrows"></div>
         </div>
 
         <!-- DEBUG PANEL -->
         <div id="debugPanel">
             <div class="card">
-                <div class="card-title">🔧 Debug</div>
+                <div class="card-title">
+                    <i class="ti ti-tool"></i>
+                    Debug
+                </div>
                 <div class="input-group">
                     <input id="startLat" placeholder="Start Latitude">
                     <input id="startLon" placeholder="Start Longitude">
@@ -216,6 +244,58 @@
                     </button>
                 </div>
             </div>
+        </div>
+
+    </div>
+
+    <!-- SETTINGS PANEL -->
+    <div id="settingsPanel" class="settings-panel">
+        <div class="settings-header">
+            <div class="settings-title">Settings</div>
+            <button class="settings-close" onclick="toggleSettings()" title="Close">
+                <i class="ti ti-x"></i>
+            </button>
+        </div>
+
+        <div class="settings-section">
+            <div class="settings-section-title">Vehicle Style</div>
+            <div class="marker-options">
+                <button class="marker-btn active"
+                    id="btn-arrow"
+                    onclick="setMarkerStyle('arrow')">
+                    <i class="ti ti-arrow-up"></i>
+                    Arrow
+                </button>
+                <button class="marker-btn"
+                    id="btn-car"
+                    onclick="setMarkerStyle('car')">
+                    <i class="ti ti-car"></i>
+                    Car
+                </button>
+                <button class="marker-btn"
+                    id="btn-bike"
+                    onclick="setMarkerStyle('bike')">
+                    <i class="ti ti-bike"></i>
+                    Bike
+                </button>
+                <button class="marker-btn"
+                    id="btn-cone"
+                    onclick="setMarkerStyle('cone')">
+                    <i class="ti ti-traffic-cone"></i>
+                    Cone
+                </button>
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <div class="settings-section-title">Simulation Speed</div>
+            <select id="simSpeed"
+                class="settings-select"
+                onchange="updateSimSpeed()">
+                <option value="slow">Slow (20 mph)</option>
+                <option value="normal" selected>Normal (45 mph)</option>
+                <option value="fast">Fast (70 mph)</option>
+            </select>
         </div>
 
     </div>
@@ -244,7 +324,8 @@
             <div class="nav-speed-unit">mph</div>
         </div>
         <button class="nav-stop-btn" onclick="stopNavigation()">
-            ⏹ Stop
+            <i class="ti ti-player-stop"></i>
+            Stop
         </button>
         <div class="nav-step-counter" id="navStepCounter">
             Step 1 of 1
@@ -256,6 +337,8 @@
 
     <!-- Your logic -->
     <script src="script.js"></script>
+    <!-- TOAST NOTIFICATION -->
+    <div id="toast" class="toast" aria-live="polite"></div>
 
 </body>
 </html>

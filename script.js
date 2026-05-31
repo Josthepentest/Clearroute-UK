@@ -40,6 +40,15 @@ map.on('load', () => {
     console.log('MapLibre map loaded successfully');
 });
 
+// OpenFreeMap style references icons (bowls, rugby_union, etc.) that aren't
+// in the base sprite set. Provide blank placeholders so MapLibre stops warning.
+map.on('styleimagemissing', (e) => {
+    if (!map.hasImage(e.id)) {
+        // 1x1 transparent placeholder
+        map.addImage(e.id, { width: 1, height: 1, data: new Uint8Array(4) });
+    }
+});
+
 
 
 map.on("zoomstart", function() {
@@ -163,18 +172,105 @@ function showStatus(message, type) {
     // Remove all previous type classes
     box.classList.remove("status-error", "status-loading", "status-success");
 
+    // Icon by status type
+    const iconMap = {
+        error:   '<i class="ti ti-alert-circle"></i>',
+        loading: '<i class="ti ti-loader-2 status-spin"></i>',
+        success: '<i class="ti ti-circle-check"></i>'
+    };
+    const icon = iconMap[type] || '';
+
     // Add the correct class for this type
     if (type === "error")   box.classList.add("status-error");
     if (type === "loading") box.classList.add("status-loading");
     if (type === "success") box.classList.add("status-success");
 
     box.style.display = "block";
-    box.innerHTML = message;
+    box.innerHTML = `${icon} ${message}`;
 }
+
+
+
+// =========================
+// TOAST NOTIFICATION
+// =========================
+// Auto-dismissing notification — replaces alert() for non-blocking UX.
+function showToast(message, duration = 3500) {
+    const toast = document.getElementById("toast");
+    if (!toast) return;
+
+    toast.innerHTML = `<i class="ti ti-circle-check"></i> ${message}`;
+    toast.classList.add("show");
+
+    clearTimeout(window._toastTimer);
+    window._toastTimer = setTimeout(() => {
+        toast.classList.remove("show");
+    }, duration);
+}
+
 
 function hideStatus() {
     document.getElementById("statusBox").style.display = "none";
 }
+
+
+
+
+// =========================
+// COMPLEXITY SCORE (client-side)
+// =========================
+// Returns { score, level, levelClass } from route data.
+// Weighted: roundabouts 1.5×, sharp turns 1.2×, close junctions 1.0×.
+// Normalised by route distance so density matters, not just absolute counts.
+function calculateComplexityScore(data) {
+
+    const roundabouts = (data.roundabout_warnings || []).length;
+    const warnings = (data.warnings || []).length;
+    const steps = data.steps || [];
+
+    // Count sharp turns by parsing instructions
+    let sharpTurns = 0;
+    steps.forEach(step => {
+        const instr = step.instruction.toLowerCase();
+        if (instr.includes("sharp left") || instr.includes("sharp right")) {
+            sharpTurns++;
+        }
+    });
+
+    // Distance fallback to 1km if missing — avoids divide-by-zero
+    const distanceKm = (data.journey && data.journey.distance_metres)
+        ? data.journey.distance_metres / 1000
+        : 1;
+
+    // Weighted raw score
+    const raw = (roundabouts * 1.5)
+              + (sharpTurns * 1.2)
+              + (warnings * 1.0);
+
+    // Density per 10km
+    const density = (raw / Math.max(distanceKm, 1)) * 10;
+
+    // Clamp to 0-10 and round to one decimal
+    const score = Math.round(Math.min(10, Math.max(0, density)) * 10) / 10;
+
+    // Tiered level
+    let level, levelClass;
+    if (score < 3.5) {
+        level = "Low";
+        levelClass = "level-low";
+    } else if (score < 6.5) {
+        level = "Medium";
+        levelClass = "level-medium";
+    } else {
+        level = "High";
+        levelClass = "level-high";
+    }
+
+    return { score, level, levelClass };
+}
+
+
+
 
 
 // =========================
@@ -467,14 +563,44 @@ function toggleVoice() {
     voiceEnabled = !voiceEnabled;
 
     const btn = document.getElementById("voiceToggleBtn");
+    const icon = document.getElementById("voiceIcon");
+
+    if (icon) {
+        icon.className = voiceEnabled
+            ? "ti ti-volume"
+            : "ti ti-volume-off";
+    }
     if (btn) {
-        btn.textContent = voiceEnabled ? "🔊 Voice On" : "🔇 Voice Off";
-        btn.style.opacity = voiceEnabled ? "1" : "0.5";
+        // Toggle off-state class — styled in CSS, no inline opacity
+        btn.classList.toggle("voice-off", !voiceEnabled);
     }
 
     // Confirm the toggle to the user via speech
     if (voiceEnabled) speak("Voice guidance on");
 }
+
+// =========================
+// SETTINGS PANEL (stub — Phase 5)
+// =========================
+// Placeholder. Phase 5 will wire this up to a settings panel
+// containing vehicle style selector and other preferences.
+function toggleSettings() {
+    document.body.classList.toggle("settings-open");
+}
+
+// Click outside settings to close it
+document.addEventListener("click", (e) => {
+    if (!document.body.classList.contains("settings-open")) return;
+
+    const panel = document.getElementById("settingsPanel");
+    const btn = document.getElementById("settingsBtn");
+
+    // Ignore clicks inside the panel or on the gear button itself
+    if (panel && panel.contains(e.target)) return;
+    if (btn && btn.contains(e.target)) return;
+
+    document.body.classList.remove("settings-open");
+});
 
 
 // =========================
@@ -555,11 +681,11 @@ function generateBriefing(data) {
 
     // Build journey line if data exists
     const journeyLine = (timeText && distanceText)
-        ? `<b>🕐 Estimated journey:</b> ${timeText} (${distanceText})<br><br>`
-        : "";
+    ? `<b><i class="ti ti-clock"></i> Estimated journey:</b> ${timeText} (${distanceText})<br><br>`
+    : "";
 
     return `
-        <b>📋 Pre-Drive Briefing</b><br><br>
+        <b><i class="ti ti-clipboard-list"></i> Pre-Drive Briefing</b><br><br>
         ${journeyLine}
         ${routeDescription}<br><br>
         ${advice}
@@ -767,8 +893,8 @@ async function getSmartRoute() {
         return;
     }
 
-    // Briefing — populate collapsed card
-    const complexity = data.junction_complexity;
+   // Complexity — derive score, level, level-class from client-side calc
+    const complexity = calculateComplexityScore(data);
     const complexityColour = getComplexityColour(complexity.level);
     const journey = data.journey || {};
     const timeText = journey.duration_seconds
@@ -776,15 +902,46 @@ async function getSmartRoute() {
     const distText = journey.distance_metres
         ? formatDistance(journey.distance_metres) : "";
 
-    // Summary line shown in collapsed header
-    document.getElementById("briefingSummary").innerHTML = `
-        <span class="complexity-dot"
-            style="background:${complexityColour}">
-        </span>
-        ${complexity.level} complexity
-        ${timeText ? "· " + timeText : ""}
-        ${distText ? "· " + distText : ""}
-    `;
+    // --- HERO CARD ---
+    document.getElementById("heroScore").textContent =
+        complexity.score.toFixed(1);
+    document.getElementById("heroLevel").textContent = complexity.level;
+    document.getElementById("heroLevel").className =
+        "hero-level " + complexity.levelClass;
+    document.getElementById("heroTime").textContent = timeText || "—";
+    document.getElementById("heroDistance").textContent = distText || "—";
+    document.getElementById("heroCard").style.display = "block";
+
+    // --- MAP OVERLAYS — show FAB Start and Preview pill ---
+    document.getElementById("fabStart").style.display = "flex";
+    document.getElementById("previewPill").style.display = "flex";
+
+    // --- BRIEFING SUMMARY — describe contents, not duplicate hero ---
+    const roundaboutCount = (data.roundabout_warnings || []).length;
+    let sharpTurnCount = 0;
+    (data.steps || []).forEach(step => {
+        const i = step.instruction.toLowerCase();
+        if (i.includes("sharp left") || i.includes("sharp right")) {
+            sharpTurnCount++;
+        }
+    });
+
+    let summaryParts = [];
+    if (roundaboutCount > 0) {
+        summaryParts.push(
+            `${roundaboutCount} roundabout${roundaboutCount > 1 ? "s" : ""}`
+        );
+    }
+    if (sharpTurnCount > 0) {
+        summaryParts.push(
+            `${sharpTurnCount} sharp turn${sharpTurnCount > 1 ? "s" : ""}`
+        );
+    }
+
+    document.getElementById("briefingSummary").textContent =
+        summaryParts.length > 0
+            ? summaryParts.join(" · ")
+            : "Straightforward route";
 
     // Full content shown when expanded
     document.getElementById("briefingBody").innerHTML =
@@ -924,8 +1081,8 @@ async function getSmartRoute() {
             layout: {
                 'symbol-placement': 'line',
                 'symbol-spacing': 100,
-                'text-field': '▶',
-                'text-size': 12,
+                'text-field': '>',
+                'text-size': 14,
                 'text-rotation-alignment': 'map',
                 'text-keep-upright': false,
                 'text-allow-overlap': true,
@@ -1062,19 +1219,19 @@ async function loadRoute() {
 function renderSteps() {
 
     const box = document.getElementById("stepsBox");
-    box.innerHTML = "<b>🧭 Navigation Steps</b><br><br>";
+    box.innerHTML = `<b><i class="ti ti-compass"></i> Navigation Steps</b><br><br>`;
 
     navigationSteps.forEach((step, index) => {
         const text = step.enhanced_instruction || step.instruction;
 
         if (index < currentStepIndex) {
             box.innerHTML +=
-                `<span style="color:#aaa">✅ ${text}</span><br>`;
+                `<span style="color:#aaa"><i class="ti ti-circle-check"></i> ${text}</span><br>`;
         } else if (index === currentStepIndex) {
             box.innerHTML +=
-                `<span style="color:#1a2744; font-weight:bold">🔥 ${text}</span><br>`;
+                `<span style="color:#1a2744; font-weight:600"><i class="ti ti-arrow-big-right"></i> ${text}</span><br>`;
         } else {
-            box.innerHTML += `⬜ ${text}<br>`;
+            box.innerHTML += `<i class="ti ti-circle"></i> ${text}<br>`;
         }
     });
 }
@@ -1252,7 +1409,7 @@ function getLaneConfig(complexityType) {
 
     if (complexityType === "roundabout") {
         return {
-            title: "🔄 ROUNDABOUT AHEAD — CHOOSE YOUR LANE",
+            title: '<i class="ti ti-rotate-clockwise-2"></i> ROUNDABOUT AHEAD — CHOOSE YOUR LANE',
             lanes: [
                 {
                     arrow: "↖",
@@ -1275,7 +1432,7 @@ function getLaneConfig(complexityType) {
 
     if (complexityType === "sharp-left") {
         return {
-            title: "⬅ SHARP LEFT — STAY LEFT",
+            title: '<i class="ti ti-arrow-back"></i> SHARP LEFT — STAY LEFT',
             lanes: [
                 {
                     arrow: "↙",
@@ -1293,7 +1450,7 @@ function getLaneConfig(complexityType) {
 
     if (complexityType === "sharp-right") {
         return {
-            title: "➡ SHARP RIGHT — STAY RIGHT",
+            title: '<i class="ti ti-arrow-forward"></i> SHARP RIGHT — STAY RIGHT',
             lanes: [
                 {
                     arrow: "↑",
@@ -1311,7 +1468,7 @@ function getLaneConfig(complexityType) {
 
     if (complexityType === "close-junction") {
         return {
-            title: "⚠️ TURNS CLOSE TOGETHER — STAY ALERT",
+            title: '<i class="ti ti-alert-triangle"></i> TURNS CLOSE TOGETHER — STAY ALERT',
             lanes: [
                 {
                     arrow: "↑",
@@ -1340,13 +1497,13 @@ function showJunctionWarning(complexityType, stepsAway) {
     if (!box) return;
 
     const messages = {
-        "roundabout":      "🔄 Roundabout ahead",
-        "sharp-left":      "⬅ Sharp left turn ahead",
-        "sharp-right":     "➡ Sharp right turn ahead",
-        "close-junction":  "⚠️ Turns very close together ahead"
+    "roundabout":      '<i class="ti ti-rotate-clockwise-2"></i> Roundabout ahead',
+    "sharp-left":      '<i class="ti ti-arrow-back"></i> Sharp left turn ahead',
+    "sharp-right":     '<i class="ti ti-arrow-forward"></i> Sharp right turn ahead',
+    "close-junction":  '<i class="ti ti-alert-triangle"></i> Turns very close together ahead'
     };
 
-    const message = messages[complexityType] || "⚠️ Complex junction ahead";
+    const message = messages[complexityType] || '<i class="ti ti-alert-triangle"></i> Complex junction ahead';
 
     box.innerHTML = `
         ${message}
@@ -1380,8 +1537,8 @@ function showLaneGuidance(complexityType) {
 
     if (!titleEl || !arrowsEl || !box) return;
 
-    // Set title
-    titleEl.textContent = config.title;
+    // Set title — innerHTML allowed (config.title is internal, not user input)
+    titleEl.innerHTML = config.title;
 
     // Build lane arrows
     arrowsEl.innerHTML = config.lanes.map(lane => `
@@ -1472,9 +1629,13 @@ function startNavigationSimulation() {
 
     // Switch to navigation mode UI
     document.body.classList.add("nav-mode");
+    document.body.classList.remove("settings-open");
     document.getElementById("navBanner").style.display = "block";
-    document.getElementById("stopBtn").style.display = "inline";
     updateNavBanner(0);
+
+    // Map container resized when sidebar is hidden — tell MapLibre to repaint
+    // 50ms delay lets the CSS class apply before we measure
+    setTimeout(() => map.resize(), 50);
 
     // Speak the first instruction immediately
     lastSpokenStepIndex = 0;
@@ -1502,47 +1663,58 @@ function startNavigationSimulation() {
             clearInterval(simulationInterval);
             simulationInterval = null;
 
-            navigationMarker.setLngLat(toMLCoord(
-                routeCoords[routeCoords.length - 1]
-            ));
+           // Remove the moving marker entirely — red destination pin stays as the end indicator
+            if (navigationMarker) {
+                navigationMarker.remove();
+                navigationMarker = null;
+            }
 
             currentStepIndex = navigationSteps.length - 1;
             renderSteps();
             updateNavBanner(currentStepIndex);
 
-            document.getElementById("stopBtn").style.display = "none";
-
-            map.fitBounds(toMLCoords(window.currentRouteCoords), {
-                padding: 50,
+            // Fit map to entire route — use LngLatBounds (NOT raw array)
+            const arrivalBounds = new maplibregl.LngLatBounds();
+            toMLCoords(routeCoords).forEach(coord => {
+                arrivalBounds.extend(coord);
+            });
+            map.fitBounds(arrivalBounds, {
+                padding: { top: 60, bottom: 80, left: 40, right: 60 },
                 duration: 1000,
                 pitch: 0,
                 bearing: 0
             });
 
+            // Mark entire route as travelled; nothing remaining.
+            // (Use routeCoords directly — travelledCoords/remainingCoords are declared
+            //  later in this same callback, so accessing them here = temporal dead zone)
             if (routeLineTravelled) {
-            routeLineTravelled.setData({
-                type: 'Feature',
-                geometry: {
-                    type: 'LineString',
-                    coordinates: toMLCoords(travelledCoords)
-                }
-            });
+                routeLineTravelled.setData({
+                    type: 'Feature',
+                    geometry: {
+                        type: 'LineString',
+                        coordinates: toMLCoords(routeCoords)
+                    }
+                });
             }
             if (routeLineRemaining) {
                 routeLineRemaining.setData({
                     type: 'Feature',
                     geometry: {
                         type: 'LineString',
-                        coordinates: toMLCoords(remainingCoords)
+                        coordinates: []
                     }
                 });
             }
 
             document.body.classList.remove("nav-mode");
             document.getElementById("navBanner").style.display = "none";
-            
+
+            // Tell MapLibre to repaint after sidebar comes back
+            setTimeout(() => map.resize(), 50);
+
             speak("You have arrived at your destination!");
-            alert("🧭 You have arrived at your destination!");
+            showToast("You have arrived at your destination!");
             return;
         }
 
@@ -1703,8 +1875,8 @@ function startNavigationSimulation() {
             );
             const timeEl = document.getElementById("navBannerTime");
             if (timeEl) {
-                timeEl.textContent = remainingSeconds > 0
-                    ? `🕐 ${formatDuration(remainingSeconds)} remaining`
+                timeEl.innerHTML = remainingSeconds > 0
+                    ? `<i class="ti ti-clock"></i> ${formatDuration(remainingSeconds)} remaining`
                     : "";
             }
         }
@@ -1765,8 +1937,6 @@ function stopNavigation() {
         });
     }
 
-
-    document.getElementById("stopBtn").style.display = "none";
     currentStepIndex = 0;
     renderSteps();
 
@@ -1788,6 +1958,9 @@ function stopNavigation() {
     // Exit navigation mode — restore normal UI
     document.body.classList.remove("nav-mode");
     document.getElementById("navBanner").style.display = "none";
+
+    // Map container shrunk again — tell MapLibre to repaint
+    setTimeout(() => map.resize(), 50);
 
     // Reset location input so user can start a new route
     resetStartInput();
@@ -1821,4 +1994,26 @@ function startLiveTracking() {
         },
         { enableHighAccuracy: true }
     );
+}
+
+// =========================
+// PREVIEW ROUTE — refit map to full route
+// =========================
+// Called when user taps the "Preview route" pill on the map.
+// Useful after they've zoomed/panned and want to see the whole route again.
+function previewRoute() {
+    if (!window.currentRouteCoords || !window.currentRouteCoords.length) return;
+
+    const bounds = new maplibregl.LngLatBounds();
+    toMLCoords(window.currentRouteCoords).forEach(coord => {
+        bounds.extend(coord);
+    });
+
+    map.fitBounds(bounds, {
+        padding: { top: 60, bottom: 80, left: 40, right: 60 },
+        duration: 800,
+        maxZoom: 13,
+        pitch: 0,
+        bearing: 0
+    });
 }
